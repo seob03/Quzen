@@ -1,0 +1,24 @@
+services:
+  quzen_client:
+      image: quzen_client:v1
+      build: ./fe
+      ports:
+        - 80:80  # Nginx가 80 포트로 서빙함
+      #restart: unless-stopped
+
+  quzen_server:
+    image: quzen_server:v1
+    build: ./be
+    ports:
+      - 8080:8080
+    depends_on:
+      - quzen_client
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./be # 지켜볼 경로
+          target: /app
+
+        - action: rebuild
+          path: package.json
+    #restart: unless-stopped
