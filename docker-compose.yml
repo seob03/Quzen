@@ -1,16 +1,19 @@
 services:
   quzen_client:
-      image: quzen_client:v1
-      build: ./fe
-      ports:
-        - 80:80  # Nginx가 80 포트로 서빙함
-      #restart: unless-stopped
+    image: quzen_client:v1
+    build: ./fe
+    ports:
+      - 80:80 # Nginx가 80 포트로 서빙함
+    #restart: unless-stopped
 
   quzen_server:
     image: quzen_server:v1
     build: ./be
     ports:
       - 8080:8080
+    environment:
+      - MONGO_URL=mongodb+srv://admin:quzen1234@quzenai.extqaa0.mongodb.net/?retryWrites=true&w=majority&appName=QuzenAI
+
     depends_on:
       - quzen_client
     develop:
