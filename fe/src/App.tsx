@@ -6,8 +6,9 @@ import { WrongAnswers } from './components/WrongAnswers';
 import { Archive } from './components/Archive';
 import { ChapterSelect } from './components/ChapterSelect';
 import { Navigation } from './components/Navigation';
+import { Login } from './components/Login';
 
-type View = 'home' | 'quiz' | 'study' | 'wrong-answers' | 'archive' | 'chapter-select';
+type View = 'home' | 'quiz' | 'study' | 'wrong-answers' | 'archive' | 'chapter-select' | 'login';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('home');
@@ -36,6 +37,8 @@ export default function App() {
           onChapterSelect={handleChapterSelect}
           mode="quiz"
         />;
+      case 'login':
+        return <Login />;
       default:
         return <Home onNavigate={setCurrentView} />;
     }
