@@ -12,7 +12,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      - MONGO_URL=mongodb+srv://admin:quzen1234@quzenai.extqaa0.mongodb.net/?retryWrites=true&w=majority&appName=QuzenAI
+      - MONGODB_URI_KEY=${MONGODB_URI_KEY}
 
     depends_on:
       - quzen_client

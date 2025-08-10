@@ -1,11 +1,13 @@
+require('dotenv').config({ path: '../.env' });
 const { MongoClient } = require('mongodb');
-const url = 'mongodb+srv://admin:quzen1234@quzenai.extqaa0.mongodb.net/?retryWrites=true&w=majority&appName=QuzenAI';
+const url = process.env.MONGODB_URI_KEY
 
 let db;
 let client;
 
 async function connectDB() {
-  if (db) return db;  // 이미 연결되어 있으면 재사용
+  if (db)
+    return db;  // 이미 연결되어 있으면 재사용
 
   try {
     client = new MongoClient(url);
