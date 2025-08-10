@@ -8,7 +8,9 @@ services:
 
   quzen_server:
     image: quzen_server:v1
-    build: ./be
+    build:
+      context: .
+      dockerfile: be/dockerfile
     ports:
       - 8080:8080
     environment:

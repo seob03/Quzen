@@ -2,9 +2,16 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Brain } from 'lucide-react';
 
+
 export function Login() {
+
   const handleOAuthLogin = (provider: string) => {
     console.log(`OAuth login with ${provider}`);
+    fetch('/api/test')
+      .then(res => res.json())
+      .then(data => {
+        console.log(data);
+      });
   };
 
   return (
@@ -16,7 +23,7 @@ export function Login() {
             <h1 className="text-2xl font-bold text-primary">Quzen</h1>
           </div>
         </div>
-        
+
         <Card>
           <CardHeader className="text-center">
             <CardTitle>로그인</CardTitle>
@@ -25,22 +32,22 @@ export function Login() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               variant="outline"
               onClick={() => handleOAuthLogin('google')}
             >
               Google로 로그인
             </Button>
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               variant="outline"
               onClick={() => handleOAuthLogin('github')}
             >
               GitHub으로 로그인
             </Button>
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               variant="outline"
               onClick={() => handleOAuthLogin('kakao')}
             >
