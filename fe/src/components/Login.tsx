@@ -7,10 +7,28 @@ export function Login() {
 
   const handleOAuthLogin = (provider: string) => {
     console.log(`OAuth login with ${provider}`);
-    fetch('/api/test')
+    
+    if (provider === 'google') {
+      // 구글 OAuth 로그인 시작
+      window.location.href = '/auth/google';
+    } else {
+      console.error('지원하지 않는 OAuth 제공자:', provider);
+    }
+  };
+
+  const testApiConnection = () => {
+    console.log('API 연결 테스트 시작...');
+    fetch('/api/test', {
+      credentials: 'include'
+    })
       .then(res => res.json())
       .then(data => {
-        console.log(data);
+        console.log('API 응답:', data);
+        alert(`API 연결 성공!\n${JSON.stringify(data, null, 2)}`);
+      })
+      .catch(error => {
+        console.error('API 연결 실패:', error);
+        alert('API 연결 실패: ' + error.message);
       });
   };
 
@@ -53,6 +71,17 @@ export function Login() {
             >
               카카오로 로그인
             </Button>
+            
+            {/* API 테스트 버튼 */}
+            <div className="pt-4 border-t">
+              <Button
+                className="w-full"
+                variant="secondary"
+                onClick={testApiConnection}
+              >
+                🔧 API 연결 테스트
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
