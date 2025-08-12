@@ -1,5 +1,6 @@
 import { Button } from './ui/button';
-import { Home, AlertCircle, Archive, Brain, LogIn } from 'lucide-react';
+import { Home, AlertCircle, Archive, Brain, LogIn, LogOut, User } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 type View = 'home' | 'quiz' | 'study' | 'wrong-answers' | 'archive' | 'chapter-select' | 'login';
 
@@ -9,6 +10,16 @@ interface NavigationProps {
 }
 
 export function Navigation({ currentView, onNavigate }: NavigationProps) {
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+
+  const handleAuthAction = () => {
+    if (isAuthenticated) {
+      logout();
+    } else {
+      onNavigate('login');
+    }
+  };
+
   return (
     <nav className="bg-card border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -49,14 +60,32 @@ export function Navigation({ currentView, onNavigate }: NavigationProps) {
               </Button>
             </div>
             
-            <Button
-              variant="outline"
-              onClick={() => onNavigate('login')}
-              className="flex items-center space-x-2"
-            >
-              <LogIn className="w-4 h-4" />
-              <span className="hidden sm:inline">로그인</span>
-            </Button>
+            <div className="flex items-center space-x-3">
+              {isAuthenticated && user && (
+                <div className="hidden sm:flex items-center space-x-2 text-sm text-muted-foreground">
+                  <User className="w-4 h-4" />
+                  <span>{user.name}</span>
+                </div>
+              )}
+              <Button
+                variant="outline"
+                onClick={handleAuthAction}
+                disabled={isLoading}
+                className="flex items-center space-x-2"
+              >
+                {isAuthenticated ? (
+                  <>
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden sm:inline">로그아웃</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4" />
+                    <span className="hidden sm:inline">로그인</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           <div className="md:hidden flex items-center space-x-2">
@@ -69,11 +98,16 @@ export function Navigation({ currentView, onNavigate }: NavigationProps) {
             </Button>
             <Button
               variant="outline"
-              onClick={() => onNavigate('login')}
+              onClick={handleAuthAction}
+              disabled={isLoading}
               size="sm"
               className="flex items-center space-x-1"
             >
-              <LogIn className="w-4 h-4" />
+              {isAuthenticated ? (
+                <LogOut className="w-4 h-4" />
+              ) : (
+                <LogIn className="w-4 h-4" />
+              )}
             </Button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 class GoogleUser {
   constructor(db) {
     this.db = db;
-    this.collection = db.collection('users');
+    this.collection = db.collection('google_users');
   }
 
   async findByGoogleId(googleId) {

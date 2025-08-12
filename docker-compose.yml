@@ -4,6 +4,8 @@ services:
     build: ./fe
     ports:
       - 80:80 # Nginx가 80 포트로 서빙함
+    volumes: 
+      - ./fe:/app
 
   quzen_server:
     image: quzen_server:v1
