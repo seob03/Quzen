@@ -6,12 +6,16 @@ const passport = require('passport');
 const cors = require('cors');
 const connectDB = require('./db.js');
 const configurePassport = require('./src/config/passport');
-const createAuthRoutes = require('./src/routes/authRoutes');
+const createGoogleAuthRoutes = require('./src/routes/googleAuthRoutes');
+const createKakaoAuthRoutes = require('./src/routes/kakaoAuthRoutes');
+
 
 // 환경변수 디버그 로그
 console.log('🔍 환경변수 로딩 상태:');
 console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ 설정됨' : '❌ 없음');
 console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? '✅ 설정됨' : '❌ 없음');
+console.log('KAKAO_CLIENT_ID:', process.env.KAKAO_CLIENT_ID ? '✅ 설정됨' : '❌ 없음');
+console.log('KAKAO_CLIENT_SECRET:', process.env.KAKAO_CLIENT_SECRET ? '✅ 설정됨' : '❌ 없음');
 console.log('SESSION_SECRET:', process.env.SESSION_SECRET ? '✅ 설정됨' : '❌ 없음');
 console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'http://localhost');
 console.log('MONGODB_URI:', process.env.MONGODB_URI || 'mongodb://mongo:27017/quzen');
@@ -51,12 +55,16 @@ let dbInstance;
 
 connectDB().then((db) => {
   dbInstance = db; // 종료 시 사용하기 위해 저장
-  
+
   // Passport 설정
   configurePassport(db);
-  
-  // 인증 라우트 설정
-  app.use('/auth', createAuthRoutes(db));
+
+  // 구글 인증 라우트 설정
+  app.use('/auth', createGoogleAuthRoutes(db));
+
+  // 카카오 인증 라우트 설정
+
+  app.use('/auth', createKakaoAuthRoutes(db));
 
   server = app.listen(process.env.PORT || 8080, () => {
     console.log('API 서버 실행중 http://localhost:8080');
@@ -75,8 +83,8 @@ connectDB().then((db) => {
 
   // API 연결 테스트 (OAuth 없이)
   app.get('/api/test', (req, res) => {
-    res.json({ 
-      message: 'API 연결 성공!', 
+    res.json({
+      message: 'API 연결 성공!',
       timestamp: new Date().toISOString(),
       env: {
         hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
@@ -86,14 +94,6 @@ connectDB().then((db) => {
     });
   });
 
-  app.get('/api/news', async (req, res) => {
-    try {
-      await db.collection('test').insertOne({ title: '큐젠 docker DB 테스트' });
-      res.json({ message: '완료~' });
-    } catch (error) {
-      res.status(500).json({ error: 'DB 오류났다요~' });
-    }
-  });
 
   // API 서버이므로 다른 라우트는 404 (정규식 사용)
   app.get(/.*/, (req, res) => {

@@ -11,6 +11,9 @@ export function Login() {
     if (provider === 'google') {
       // 구글 OAuth 로그인 시작
       window.location.href = '/auth/google';
+    } else if (provider === 'kakao') {
+      // 카카오 OAuth 로그인 시작
+      window.location.href = '/auth/kakao';
     } else {
       console.error('지원하지 않는 OAuth 제공자:', provider);
     }

@@ -1,4 +1,4 @@
-class User {
+class GoogleUser {
   constructor(db) {
     this.db = db;
     this.collection = db.collection('users');
@@ -21,14 +21,14 @@ class User {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     const result = await this.collection.insertOne(user);
     return { ...user, _id: result.insertedId };
   }
 
   async updateOrCreate(userData) {
     const existingUser = await this.findByGoogleId(userData.googleId);
-    
+
     if (existingUser) {
       // 기존 사용자 정보 업데이트
       const updateData = {
@@ -36,12 +36,12 @@ class User {
         picture: userData.picture,
         updatedAt: new Date()
       };
-      
+
       await this.collection.updateOne(
         { googleId: userData.googleId },
         { $set: updateData }
       );
-      
+
       return { ...existingUser, ...updateData };
     } else {
       // 새 사용자 생성
@@ -50,4 +50,4 @@ class User {
   }
 }
 
-module.exports = User;
+module.exports = GoogleUser;

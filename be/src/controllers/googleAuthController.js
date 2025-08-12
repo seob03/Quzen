@@ -1,6 +1,6 @@
 const GoogleUser = require('../models/GoogleUser');
 
-class AuthController {
+class GoogleAuthController {
   constructor(db) {
     this.userModel = new GoogleUser(db);
   }
@@ -45,4 +45,4 @@ class AuthController {
   }
 }
 
-module.exports = AuthController;
+module.exports = GoogleAuthController;

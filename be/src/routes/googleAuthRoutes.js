@@ -1,11 +1,10 @@
 const express = require('express');
 const passport = require('passport');
-const AuthController = require('../controllers/authController');
-require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
+const GoogleAuthController = require('../controllers/googleAuthController');
 
-function createAuthRoutes(db) {
+function createGoogleAuthRoutes(db) {
   const router = express.Router();
-  const authController = new AuthController(db);
+  const googleAuthController = new GoogleAuthController(db);
 
   // 구글 로그인 시작
   router.get('/google', (req, res, next) => {
@@ -35,7 +34,7 @@ function createAuthRoutes(db) {
 
   // 로그아웃
   router.get('/logout', (req, res) => {
-    authController.logout(req, res);
+    googleAuthController.logout(req, res);
   });
 
   // 현재 사용자 정보 조회
@@ -57,4 +56,4 @@ function createAuthRoutes(db) {
   return router;
 }
 
-module.exports = createAuthRoutes;
+module.exports = createGoogleAuthRoutes;
