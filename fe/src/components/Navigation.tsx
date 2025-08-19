@@ -1,8 +1,8 @@
 import { Button } from './ui/button';
-import { Home, AlertCircle, Archive, Brain, LogIn, LogOut, User } from 'lucide-react';
+import { Home, AlertCircle, Archive, Brain, LogIn, LogOut, User, BookOpen } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
-type View = 'home' | 'quiz' | 'study' | 'wrong-answers' | 'archive' | 'chapter-select' | 'login';
+type View = 'home' | 'wrong-answers' | 'archive' | 'login' | 'db-quiz-generator';
 
 interface NavigationProps {
   currentView: View;
@@ -57,6 +57,14 @@ export function Navigation({ currentView, onNavigate }: NavigationProps) {
               >
                 <Archive className="w-4 h-4" />
                 <span>아카이브</span>
+              </Button>
+              <Button
+                variant={currentView === 'db-quiz-generator' ? 'default' : 'ghost'}
+                onClick={() => onNavigate('db-quiz-generator')}
+                className="flex items-center space-x-2"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>AI 매경 퀴즈</span>
               </Button>
             </div>
             

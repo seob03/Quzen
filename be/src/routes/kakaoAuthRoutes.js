@@ -6,7 +6,12 @@ function createKakaoAuthRoutes(db) {
   const router = express.Router();
   const kakaoAuthController = new KakaoAuthController(db);
 
-  // 카카오 로그인 시작
+  /**
+   * @route GET /auth/kakao
+   * @desc 카카오 로그인 시작
+   * @access Public
+   * @author 이민섭
+   */
   router.get('/kakao', (req, res, next) => {
     console.log('Kakao OAuth 시작');
     passport.authenticate('kakao', {
@@ -14,7 +19,12 @@ function createKakaoAuthRoutes(db) {
     })(req, res, next);
   });
 
-  // 카카오 로그인 콜백
+  /**
+   * @route GET /auth/kakao/callback
+   * @desc 카카오 로그인 콜백
+   * @access Public
+   * @author 이민섭
+   */
   router.get('/kakao/callback',
     passport.authenticate('kakao', {
       failureRedirect: '/auth/failure',

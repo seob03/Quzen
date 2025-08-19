@@ -1,98 +1,78 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Input } from './ui/input';
-import { ArrowLeft, Search, Calendar, BookOpen, CheckCircle2, XCircle, Filter } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { ArrowLeft, Search, Calendar, BookOpen, CheckCircle2, XCircle, Filter, Eye } from 'lucide-react';
 
 interface ArchiveProps {
   onBack: () => void;
 }
 
+interface QuizResult {
+  questionIndex: number;
+  userAnswer: number;
+  correctAnswer: number;
+  isCorrect: boolean;
+}
+
+interface Quiz {
+  _id: string;
+  title: string;
+  subject: string;
+  difficulty: string;
+  questions: Array<{
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation?: string;
+  }>;
+  results?: QuizResult[];
+  completedAt?: string;
+  score?: number;
+  totalQuestions?: number;
+  correctAnswers?: number;
+  createdAt: string;
+  mode: string;
+}
+
 export function Archive({ onBack }: ArchiveProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedChapter, setSelectedChapter] = useState('all');
+  const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedResult, setSelectedResult] = useState('all');
   const [sortBy, setSortBy] = useState('date');
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [groupedQuizzes, setGroupedQuizzes] = useState<Record<string, Quiz[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
 
-  // Mock data for archived questions
-  const archivedQuestions = [
-    {
-      id: '1',
-      question: '경제학에서 말하는 "기회비용"의 정확한 정의는 무엇인가?',
-      chapter: '경제학 개론',
-      userAnswer: '선택하지 않은 대안 중 가장 가치 있는 것의 가치',
-      correctAnswer: '선택하지 않은 대안 중 가장 가치 있는 것의 가치',
-      isCorrect: true,
-      difficulty: 'easy',
-      solvedDate: '2024-01-16',
-      timeSpent: '45초',
-      mode: 'quiz'
-    },
-    {
-      id: '2',
-      question: '완전경쟁시장의 특징이 아닌 것은?',
-      chapter: '경제학 개론',
-      userAnswer: '다수의 공급자와 수요자',
-      correctAnswer: '정보의 비대칭성',
-      isCorrect: false,
-      difficulty: 'medium',
-      solvedDate: '2024-01-15',
-      timeSpent: '1분 20초',
-      mode: 'quiz'
-    },
-    {
-      id: '3',
-      question: 'GDP(국내총생산)에 포함되지 않는 것은?',
-      chapter: '경제학 개론',
-      userAnswer: '중고차 판매',
-      correctAnswer: '중고차 판매',
-      isCorrect: true,
-      difficulty: 'medium',
-      solvedDate: '2024-01-14',
-      timeSpent: '2분 10초',
-      mode: 'study'
-    },
-    {
-      id: '4',
-      question: '현재가치 계산에 사용되는 할인율이 높아지면?',
-      chapter: '재무관리',
-      userAnswer: '현재가치가 낮아진다',
-      correctAnswer: '현재가치가 낮아진다',
-      isCorrect: true,
-      difficulty: 'medium',
-      solvedDate: '2024-01-13',
-      timeSpent: '1분 35초',
-      mode: 'quiz'
-    },
-    {
-      id: '5',
-      question: '마케팅 믹스의 4P에 포함되지 않는 것은?',
-      chapter: '마케팅 원론',
-      userAnswer: 'People',
-      correctAnswer: 'People',
-      isCorrect: true,
-      difficulty: 'easy',
-      solvedDate: '2024-01-12',
-      timeSpent: '30초',
-      mode: 'study'
-    },
-    {
-      id: '6',
-      question: '회계등식의 기본 형태는?',
-      chapter: '회계학 기초',
-      userAnswer: '자산 = 부채 + 자본',
-      correctAnswer: '자산 = 부채 + 자본',
-      isCorrect: true,
-      difficulty: 'easy',
-      solvedDate: '2024-01-11',
-      timeSpent: '25초',
-      mode: 'quiz'
+  useEffect(() => {
+    fetchQuizzes();
+  }, []);
+
+  const fetchQuizzes = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/quiz/user', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setQuizzes(data.quizzes || []);
+        setGroupedQuizzes(data.groupedQuizzes || {});
+      } else {
+        console.error('퀴즈 목록 조회 실패');
+      }
+    } catch (error) {
+      console.error('퀴즈 목록 조회 오류:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  const chapters = ['경제학 개론', '재무관리', '마케팅 원론', '회계학 기초', '경영학 원론', '경영통계'];
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -112,24 +92,24 @@ export function Archive({ onBack }: ArchiveProps) {
     }
   };
 
-  // Filter and sort questions
-  const filteredQuestions = archivedQuestions
-    .filter(q => {
-      const matchesSearch = q.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           q.chapter.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesChapter = selectedChapter === 'all' || q.chapter === selectedChapter;
+  // Filter and sort quizzes
+  const filteredQuizzes = quizzes
+    .filter(quiz => {
+      const matchesSearch = quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           quiz.subject.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSubject = selectedSubject === 'all' || quiz.subject === selectedSubject;
       const matchesResult = selectedResult === 'all' || 
-                           (selectedResult === 'correct' && q.isCorrect) ||
-                           (selectedResult === 'wrong' && !q.isCorrect);
+                           (selectedResult === 'completed' && quiz.results && quiz.results.length > 0) ||
+                           (selectedResult === 'incomplete' && (!quiz.results || quiz.results.length === 0));
       
-      return matchesSearch && matchesChapter && matchesResult;
+      return matchesSearch && matchesSubject && matchesResult;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'date':
-          return new Date(b.solvedDate).getTime() - new Date(a.solvedDate).getTime();
-        case 'chapter':
-          return a.chapter.localeCompare(b.chapter);
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'subject':
+          return a.subject.localeCompare(b.subject);
         case 'difficulty':
           const difficultyOrder: Record<string, number> = { 'easy': 1, 'medium': 2, 'hard': 3 };
           return (difficultyOrder[a.difficulty] || 0) - (difficultyOrder[b.difficulty] || 0);
@@ -139,11 +119,41 @@ export function Archive({ onBack }: ArchiveProps) {
     });
 
   const stats = {
-    total: archivedQuestions.length,
-    correct: archivedQuestions.filter(q => q.isCorrect).length,
-    wrong: archivedQuestions.filter(q => !q.isCorrect).length,
-    accuracy: Math.round((archivedQuestions.filter(q => q.isCorrect).length / archivedQuestions.length) * 100)
+    total: quizzes.length,
+    completed: quizzes.filter(q => q.results && q.results.length > 0).length,
+    incomplete: quizzes.filter(q => !q.results || q.results.length === 0).length,
+    averageScore: quizzes.filter(q => q.score && q.results && q.results.length > 0).length > 0 
+      ? Math.round(quizzes.filter(q => q.score && q.results && q.results.length > 0).reduce((sum, q) => sum + (q.score || 0), 0) / quizzes.filter(q => q.score && q.results && q.results.length > 0).length)
+      : 0
   };
+
+  const subjects = Array.from(new Set(quizzes.map(q => q.subject)));
+
+  const handleViewDetail = (quiz: Quiz) => {
+    setSelectedQuiz(quiz);
+    setShowDetailDialog(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" onClick={onBack} size="sm">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h2 className="text-2xl">문제 아카이브</h2>
+              <p className="text-muted-foreground">지금까지 풀었던 모든 문제를 확인하세요</p>
+            </div>
+          </div>
+        </div>
+        <div className="text-center py-8">
+          <p>로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -165,25 +175,25 @@ export function Archive({ onBack }: ArchiveProps) {
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl mb-1">{stats.total}</div>
-            <div className="text-sm text-muted-foreground">총 문제</div>
+            <div className="text-sm text-muted-foreground">총 퀴즈</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl text-green-600 mb-1">{stats.correct}</div>
-            <div className="text-sm text-muted-foreground">정답</div>
+            <div className="text-2xl text-green-600 mb-1">{stats.completed}</div>
+            <div className="text-sm text-muted-foreground">완료된 퀴즈</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl text-red-600 mb-1">{stats.wrong}</div>
-            <div className="text-sm text-muted-foreground">오답</div>
+            <div className="text-2xl text-blue-600 mb-1">{stats.incomplete}</div>
+            <div className="text-sm text-muted-foreground">미완료 퀴즈</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl text-blue-600 mb-1">{stats.accuracy}%</div>
-            <div className="text-sm text-muted-foreground">정답률</div>
+            <div className="text-2xl text-purple-600 mb-1">{stats.averageScore}%</div>
+            <div className="text-sm text-muted-foreground">평균 점수</div>
           </CardContent>
         </Card>
       </div>
@@ -201,33 +211,33 @@ export function Archive({ onBack }: ArchiveProps) {
             <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="문제 또는 단원 검색..."
+                placeholder="퀴즈 제목 또는 과목 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
             
-            <Select value={selectedChapter} onValueChange={setSelectedChapter}>
+            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
               <SelectTrigger>
-                <SelectValue placeholder="단원 선택" />
+                <SelectValue placeholder="과목 선택" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">모든 단원</SelectItem>
-                {chapters.map(chapter => (
-                  <SelectItem key={chapter} value={chapter}>{chapter}</SelectItem>
+                <SelectItem value="all">모든 과목</SelectItem>
+                {subjects.map(subject => (
+                  <SelectItem key={subject} value={subject}>{subject}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             <Select value={selectedResult} onValueChange={setSelectedResult}>
               <SelectTrigger>
-                <SelectValue placeholder="결과 선택" />
+                <SelectValue placeholder="상태 선택" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">모든 결과</SelectItem>
-                <SelectItem value="correct">정답만</SelectItem>
-                <SelectItem value="wrong">오답만</SelectItem>
+                <SelectItem value="all">모든 상태</SelectItem>
+                <SelectItem value="completed">완료된 퀴즈</SelectItem>
+                <SelectItem value="incomplete">미완료 퀴즈</SelectItem>
               </SelectContent>
             </Select>
 
@@ -237,7 +247,7 @@ export function Archive({ onBack }: ArchiveProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="date">날짜순</SelectItem>
-                <SelectItem value="chapter">단원순</SelectItem>
+                <SelectItem value="subject">과목순</SelectItem>
                 <SelectItem value="difficulty">난이도순</SelectItem>
               </SelectContent>
             </Select>
@@ -248,69 +258,76 @@ export function Archive({ onBack }: ArchiveProps) {
       {/* Results */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3>검색 결과 ({filteredQuestions.length}개)</h3>
+          <h3>검색 결과 ({filteredQuizzes.length}개)</h3>
         </div>
 
-        {filteredQuestions.length === 0 ? (
+        {filteredQuizzes.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">검색 조건에 맞는 문제가 없습니다.</p>
+              <p className="text-muted-foreground">검색 조건에 맞는 퀴즈가 없습니다.</p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredQuestions.map((question) => (
-              <Card key={question.id}>
+            {filteredQuizzes.map((quiz) => (
+              <Card key={quiz._id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-2">
                       <BookOpen className="w-5 h-5" />
-                      <span className="text-sm text-muted-foreground">{question.chapter}</span>
+                      <span className="text-sm text-muted-foreground">{quiz.subject}</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Badge variant="outline">{question.mode === 'quiz' ? '퀴즈' : '문제집'}</Badge>
-                      <Badge className={getDifficultyColor(question.difficulty)}>
-                        {getDifficultyText(question.difficulty)}
+                      <Badge variant="outline">{quiz.mode === 'quiz' ? '퀴즈' : '문제집'}</Badge>
+                      <Badge className={getDifficultyColor(quiz.difficulty)}>
+                        {getDifficultyText(quiz.difficulty)}
                       </Badge>
-                      {question.isCorrect ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      {quiz.results && quiz.results.length > 0 ? (
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          <span className="text-sm font-medium">{quiz.score}%</span>
+                        </div>
+                      ) : quiz.completedAt ? (
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle2 className="w-5 h-5 text-blue-500" />
+                          <span className="text-sm font-medium">완료됨</span>
+                        </div>
                       ) : (
-                        <XCircle className="w-5 h-5 text-red-500" />
+                        <Badge variant="secondary">미완료</Badge>
                       )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p>{question.question}</p>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold">{quiz.title}</h4>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleViewDetail(quiz)}
+                      className="flex items-center space-x-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>상세보기</span>
+                    </Button>
+                  </div>
                   
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        {question.isCorrect ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-red-500" />
-                        )}
-                        <span className="text-sm">내 답안</span>
-                      </div>
-                      <div className={`p-3 border rounded-lg ${
-                        question.isCorrect 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'bg-red-50 border-red-200'
-                      }`}>
-                        {question.userAnswer}
-                      </div>
+                      <span className="text-sm text-muted-foreground">문제 수</span>
+                      <p className="font-medium">{quiz.questions.length}문제</p>
                     </div>
                     
-                    {!question.isCorrect && (
+                    {quiz.results && (
                       <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          <span className="text-sm">정답</span>
-                        </div>
-                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                          {question.correctAnswer}
-                        </div>
+                        <span className="text-sm text-muted-foreground">정답률</span>
+                                                 <div className="flex items-center space-x-2">
+                           <p className="font-medium">{quiz.correctAnswers}/{quiz.totalQuestions} ({quiz.score}%)</p>
+                           <div className="flex items-center space-x-1">
+                             <span className="text-green-600 text-sm">✓{quiz.correctAnswers || 0}</span>
+                             <span className="text-red-600 text-sm">✗{(quiz.totalQuestions || 0) - (quiz.correctAnswers || 0)}</span>
+                           </div>
+                         </div>
                       </div>
                     )}
                   </div>
@@ -319,15 +336,12 @@ export function Archive({ onBack }: ArchiveProps) {
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-1">
                         <Calendar className="w-3 h-3" />
-                        <span>{question.solvedDate}</span>
+                        <span>{new Date(quiz.createdAt).toLocaleDateString('ko-KR')}</span>
                       </div>
-                      <span>소요시간: {question.timeSpent}</span>
+                      {quiz.completedAt && (
+                        <span>완료: {new Date(quiz.completedAt).toLocaleDateString('ko-KR')}</span>
+                      )}
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      alert('이 문제를 다시 풀어보겠습니다.');
-                    }}>
-                      다시 풀기
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -335,6 +349,135 @@ export function Archive({ onBack }: ArchiveProps) {
           </div>
         )}
       </div>
+
+      {/* Detail Dialog */}
+      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedQuiz?.title}</DialogTitle>
+          </DialogHeader>
+          
+          {selectedQuiz && (
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <span className="text-sm text-muted-foreground">과목</span>
+                  <p className="font-medium">{selectedQuiz.subject}</p>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-sm text-muted-foreground">난이도</span>
+                  <Badge className={getDifficultyColor(selectedQuiz.difficulty)}>
+                    {getDifficultyText(selectedQuiz.difficulty)}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-sm text-muted-foreground">모드</span>
+                  <Badge variant="outline">{selectedQuiz.mode === 'quiz' ? '퀴즈' : '문제집'}</Badge>
+                </div>
+              </div>
+
+              {selectedQuiz.results && (
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-semibold mb-2">퀴즈 결과</h4>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="text-sm text-muted-foreground">점수</span>
+                      <p className="text-2xl font-bold">{selectedQuiz.score}%</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-muted-foreground">정답</span>
+                      <p className="text-2xl font-bold text-green-600">{selectedQuiz.correctAnswers}/{selectedQuiz.totalQuestions}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-muted-foreground">완료 시간</span>
+                      <p className="text-sm">{new Date(selectedQuiz.completedAt!).toLocaleString('ko-KR')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <h4 className="font-semibold">문제 상세</h4>
+                {selectedQuiz.questions.map((question, index) => {
+                  const result = selectedQuiz.results?.[index];
+                  return (
+                    <Card key={index}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">문제 {index + 1}</span>
+                          {result && (
+                            result.isCorrect ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-500" />
+                            )
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p>{question.question}</p>
+                        
+                        <div className="space-y-2">
+                          {question.options.map((option, optionIndex) => (
+                            <div 
+                              key={optionIndex}
+                              className={`p-3 border rounded-lg ${
+                                result ? (
+                                  optionIndex === question.correctAnswer
+                                    ? 'bg-green-50 border-green-200'
+                                    : optionIndex === result.userAnswer && !result.isCorrect
+                                    ? 'bg-red-50 border-red-200'
+                                    : 'bg-gray-50 border-gray-200'
+                                ) : 'bg-gray-50 border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-2">
+                                <span className="font-medium">{String.fromCharCode(65 + optionIndex)}.</span>
+                                <span>{option}</span>
+                                {result && optionIndex === question.correctAnswer && (
+                                  <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto" />
+                                )}
+                                {result && optionIndex === result.userAnswer && !result.isCorrect && (
+                                  <XCircle className="w-4 h-4 text-red-500 ml-auto" />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {result && (
+                          <div className="space-y-3">
+                            <div className="p-4 bg-muted rounded-lg">
+                              <h5 className="text-sm font-medium mb-2">내 답안</h5>
+                              <p className="text-sm">
+                                {String.fromCharCode(65 + result.userAnswer)}. {question.options[result.userAnswer]}
+                              </p>
+                            </div>
+                            
+                            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                              <h5 className="text-sm font-medium mb-2 text-green-800">정답</h5>
+                              <p className="text-sm text-green-800">
+                                {String.fromCharCode(65 + question.correctAnswer)}. {question.options[question.correctAnswer]}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {question.explanation && (
+                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h5 className="text-sm font-medium mb-2">해설</h5>
+                            <p className="text-sm">{question.explanation}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

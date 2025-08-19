@@ -6,15 +6,25 @@ function createGoogleAuthRoutes(db) {
   const router = express.Router();
   const googleAuthController = new GoogleAuthController(db);
 
-  // 구글 로그인 시작
+  /**
+   * @route GET /auth/google
+   * @desc 구글 로그인 시작
+   * @access Public
+   * @author 이민섭
+   */
   router.get('/google', (req, res, next) => {
-    console.log('🔐 Google OAuth 시작');
+    console.log('Google OAuth 시작');
     passport.authenticate('google', {
       scope: ['profile', 'email']
     })(req, res, next);
   });
 
-  // 구글 로그인 콜백
+  /**
+   * @route GET /auth/google/callback
+   * @desc 구글 로그인 콜백
+   * @access Public
+   * @author 이민섭
+   */
   router.get('/google/callback', 
     passport.authenticate('google', { 
       failureRedirect: '/auth/failure',
@@ -27,17 +37,17 @@ function createGoogleAuthRoutes(db) {
     }
   );
 
-  // 로그인 실패
+  // 구글 로그인 실패
   router.get('/failure', (req, res) => {
     res.status(401).json({ error: '로그인 실패' });
   });
 
-  // 로그아웃
+  // 구글 로그아웃
   router.get('/logout', (req, res) => {
     googleAuthController.logout(req, res);
   });
 
-  // 현재 사용자 정보 조회
+  // 현재 구글 사용자 정보 조회
   router.get('/me', (req, res) => {
     if (req.isAuthenticated()) {
       res.json({

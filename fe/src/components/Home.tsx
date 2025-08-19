@@ -1,9 +1,9 @@
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Progress } from './ui/progress';
-import { BookOpen, FileText, AlertCircle, Archive, TrendingUp, Target } from 'lucide-react';
+import { BookOpen, FileText, AlertCircle, Archive, TrendingUp, Target, Sparkles } from 'lucide-react';
 
-type View = 'home' | 'quiz' | 'study' | 'wrong-answers' | 'archive' | 'chapter-select';
+type View = 'home' | 'wrong-answers' | 'archive' | 'db-quiz-generator';
 
 interface HomeProps {
   onNavigate: (view: View) => void;
@@ -32,23 +32,14 @@ export function Home({ onNavigate }: HomeProps) {
         <h2 className="text-3xl mb-4">매경 TEST 준비</h2>
         <p className="text-muted-foreground mb-6">AI가 생성하는 맞춤형 문제로 효율적인 학습을 시작하세요</p>
         
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex justify-center">
           <Button 
             size="lg" 
-            onClick={() => onNavigate('chapter-select')}
-            className="flex items-center space-x-2"
+            onClick={() => onNavigate('db-quiz-generator')}
+            className="flex items-center space-x-2 px-8 py-6 text-lg"
           >
-            <BookOpen className="w-5 h-5" />
-            <span>퀴즈 모드</span>
-          </Button>
-          <Button 
-            size="lg" 
-            variant="outline"
-            onClick={() => onNavigate('study')}
-            className="flex items-center space-x-2"
-          >
-            <FileText className="w-5 h-5" />
-            <span>문제집 모드</span>
+            <Sparkles className="w-6 h-6" />
+            <span>AI 매경 퀴즈</span>
           </Button>
         </div>
       </div>

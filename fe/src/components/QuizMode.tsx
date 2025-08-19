@@ -7,6 +7,7 @@ import { ArrowLeft, Clock, CheckCircle, XCircle, ArrowRight } from 'lucide-react
 interface QuizModeProps {
   onBack: () => void;
   chapter: string;
+  quizData?: any; // 퀴즈 데이터가 전달될 경우
 }
 
 interface Question {
@@ -18,16 +19,25 @@ interface Question {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
-export function QuizMode({ onBack, chapter }: QuizModeProps) {
+interface QuizResult {
+  questionIndex: number;
+  userAnswer: number;
+  correctAnswer: number;
+  isCorrect: boolean;
+}
+
+export function QuizMode({ onBack, chapter, quizData }: QuizModeProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [timeLeft, setTimeLeft] = useState(120); // 2분
   const [isTimerActive, setIsTimerActive] = useState(true);
+  const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
+  const [quizId, setQuizId] = useState<string | null>(null);
 
-  // Mock questions data
-  const questions: Question[] = [
+  // 퀴즈 데이터가 있으면 사용, 없으면 기본 데이터 사용
+  const questions: Question[] = quizData?.quiz || [
     {
       id: '1',
       question: '경제학에서 말하는 "기회비용"의 정확한 정의는 무엇인가?',
@@ -72,6 +82,12 @@ export function QuizMode({ onBack, chapter }: QuizModeProps) {
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
+  // 퀴즈 시작 시 저장
+  useEffect(() => {
+    // 퀴즈 시작 시에는 저장하지 않음 (결과가 없으므로)
+    // 퀴즈 완료 시에만 저장하도록 변경
+  }, [quizData]);
+
   // Timer effect
   useEffect(() => {
     if (isTimerActive && timeLeft > 0 && !showResult) {
@@ -86,6 +102,77 @@ export function QuizMode({ onBack, chapter }: QuizModeProps) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const saveQuizResults = async () => {
+    try {
+      // 마지막 문제 결과 포함
+      let allResults = [...quizResults];
+      
+      // 마지막 문제 결과가 아직 추가되지 않았다면 추가
+      if (allResults.length < questions.length && selectedAnswer !== null) {
+        const finalResult: QuizResult = {
+          questionIndex: currentQuestionIndex,
+          userAnswer: selectedAnswer,
+          correctAnswer: currentQuestion.correctAnswer,
+          isCorrect: selectedAnswer === currentQuestion.correctAnswer
+        };
+        allResults.push(finalResult);
+      }
+
+      // 디버깅 로그 추가
+      console.log('=== 퀴즈 결과 저장 디버깅 ===');
+      console.log('전체 문제 수:', questions.length);
+      console.log('결과 배열 길이:', allResults.length);
+      console.log('결과 배열:', allResults);
+      console.log('현재 문제 인덱스:', currentQuestionIndex);
+      console.log('선택된 답안:', selectedAnswer);
+
+      const requestBody: any = {
+        results: allResults
+      };
+
+      // quizId가 있으면 기존 퀴즈 업데이트, 없으면 새로 생성
+      if (quizId) {
+        requestBody.quizId = quizId;
+        console.log('기존 퀴즈 업데이트:', quizId);
+      } else if (quizData) {
+        requestBody.quizData = {
+          title: `${chapter} 퀴즈`,
+          subject: chapter,
+          difficulty: 'medium',
+          questions: questions.map(q => ({
+            question: q.question,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation
+          })),
+          mode: 'quiz'
+        };
+        console.log('새 퀴즈 생성:', requestBody.quizData);
+      }
+
+      console.log('전송할 데이터:', requestBody);
+
+      const response = await fetch('/api/quiz/save-results', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('퀴즈 결과 저장 성공:', data);
+      } else {
+        const errorData = await response.json();
+        console.error('퀴즈 결과 저장 실패:', errorData);
+      }
+    } catch (error) {
+      console.error('퀴즈 결과 저장 오류:', error);
+    }
   };
 
   const handleAnswerSelect = (answerIndex: number) => {
@@ -104,10 +191,27 @@ export function QuizMode({ onBack, chapter }: QuizModeProps) {
         correct: prev.correct + (isCorrect ? 1 : 0),
         total: prev.total + 1
       }));
+
+      // 결과 저장 - 더 상세한 정보 포함
+      const result: QuizResult = {
+        questionIndex: currentQuestionIndex,
+        userAnswer: selectedAnswer,
+        correctAnswer: currentQuestion.correctAnswer,
+        isCorrect: isCorrect
+      };
+      setQuizResults(prev => [...prev, result]);
+      
+      // 콘솔에 결과 로그 (디버깅용)
+      console.log(`문제 ${currentQuestionIndex + 1}: ${isCorrect ? '정답' : '오답'}`, {
+        userAnswer: selectedAnswer,
+        correctAnswer: currentQuestion.correctAnswer,
+        selectedOption: currentQuestion.options[selectedAnswer],
+        correctOption: currentQuestion.options[currentQuestion.correctAnswer]
+      });
     }
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
@@ -115,8 +219,11 @@ export function QuizMode({ onBack, chapter }: QuizModeProps) {
       setTimeLeft(120);
       setIsTimerActive(true);
     } else {
-      // Quiz completed
-      alert(`퀴즈 완료! 점수: ${score.correct + (selectedAnswer === currentQuestion.correctAnswer ? 1 : 0)}/${questions.length}`);
+      // 퀴즈 완료 시 결과 저장
+      await saveQuizResults();
+      
+      const finalScore = score.correct + (selectedAnswer === currentQuestion.correctAnswer ? 1 : 0);
+      alert(`퀴즈 완료! 점수: ${finalScore}/${questions.length} (${Math.round((finalScore / questions.length) * 100)}%)`);
       onBack();
     }
   };
